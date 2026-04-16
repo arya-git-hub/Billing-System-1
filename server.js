@@ -2,12 +2,19 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 require("dotenv").config();
-const Invoice = require("./models/Invoice");
-const Customer = require("./models/Customer");
+
+// ✅ Models — works whether files are in /models/ subfolder or root
+let Invoice, Customer;
+try {
+  Invoice = require("./models/Invoice");
+  Customer = require("./models/Customer");
+} catch(e) {
+  Invoice = require("./Invoice");
+  Customer = require("./Customer");
+}
 
 const app = express();
 
-// ✅ CORS — allow your Vercel frontend
 app.use(cors({
   origin: [
     "https://billing-system-indol-six.vercel.app",
@@ -19,17 +26,14 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅ MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected ✅"))
   .catch(err => console.log("MongoDB Error ❌", err));
 
-// Health check
 app.get("/", (req, res) => {
   res.json({ status: "Backend Running ✅", db: mongoose.connection.readyState === 1 ? "Connected" : "Disconnected" });
 });
 
-// Save Invoice
 app.post("/save-invoice", async (req, res) => {
   try {
     const { customer, items, totals } = req.body;
@@ -42,7 +46,6 @@ app.post("/save-invoice", async (req, res) => {
   }
 });
 
-// Get all invoices
 app.get("/invoices", async (req, res) => {
   try {
     const invoices = await Invoice.find().sort({ date: -1 });
@@ -52,7 +55,6 @@ app.get("/invoices", async (req, res) => {
   }
 });
 
-// Save Customer
 app.post("/save-customer", async (req, res) => {
   try {
     const { name, address, gst, phone } = req.body;
@@ -65,33 +67,12 @@ app.post("/save-customer", async (req, res) => {
   }
 });
 
-// Get all customers
 app.get("/customers", async (req, res) => {
   try {
     const customers = await Customer.find().sort({ date: -1 });
     res.status(200).json(customers);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch customers: " + err.message });
-  }
-});
-
-// Delete invoice
-app.delete("/invoices/:id", async (req, res) => {
-  try {
-    await Invoice.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Invoice deleted ✅" });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to delete invoice" });
-  }
-});
-
-// Delete customer
-app.delete("/customers/:id", async (req, res) => {
-  try {
-    await Customer.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Customer deleted ✅" });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to delete customer" });
   }
 });
 
